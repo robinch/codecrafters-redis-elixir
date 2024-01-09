@@ -4,6 +4,7 @@ defmodule Redis.Connection do
   """
   use GenServer
   require Logger
+  alias Redis.RESP
 
   def start_link(socket) do
     GenServer.start_link(__MODULE__, socket)
@@ -21,8 +22,16 @@ defmodule Redis.Connection do
 
   def handle_info(:listen, state) do
     Logger.debug("handle_info :listen in Connection called")
-    {:ok, _data} = :gen_tcp.recv(state.socket, 0)
-    :ok = :gen_tcp.send(state.socket, "+PONG\r\n")
+    {:ok, data} = :gen_tcp.recv(state.socket, 0)
+
+    {:ok, result} =
+      data
+      |> RESP.decode()
+      |> Redis.run()
+
+    {:ok, response} = RESP.encode(result)
+
+    :ok = :gen_tcp.send(state.socket, response)
     send(self(), :listen)
     {:noreply, state}
   end
