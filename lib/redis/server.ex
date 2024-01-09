@@ -1,9 +1,9 @@
 defmodule Redis.Server do
   @moduledoc """
-  Your implementation of a Redis server
+    Listens for incoming connections and starts a new connection process for each one.
   """
-
   use GenServer
+  require Logger
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [])
@@ -11,14 +11,23 @@ defmodule Redis.Server do
 
   def init(_) do
     {:ok, listen_socket} = :gen_tcp.listen(6379, [:binary, active: false, reuseaddr: true])
-    {:ok, socket} = :gen_tcp.accept(listen_socket)
-    send(self(), :listen)
-    {:ok, %{socket: socket, listen_socket: listen_socket}}
+    {:ok, %{listen_socket: listen_socket}, {:continue, :start_loop}}
   end
 
-  def handle_info(:listen, %{socket: socket} = state) do
-    {:ok, _data} = :gen_tcp.recv(socket, 0)
-    :ok = :gen_tcp.send(socket, "+PONG\r\n")
+  def handle_continue(:start_loop, state) do
+    Logger.debug("handle_continue in Server called")
+    send(self(), :listen)
+    {:noreply, state}
+  end
+
+  def handle_info(:listen, %{listen_socket: listen_socket} = state) do
+    Logger.debug("handle_info :listen in Server called")
+    {:ok, socket} = :gen_tcp.accept(listen_socket)
+
+    {:ok, pid} =
+      DynamicSupervisor.start_child(Redis.ConnectionSupervisor, {Redis.Connection, socket})
+
+    :ok = :gen_tcp.controlling_process(socket, pid)
     send(self(), :listen)
     {:noreply, state}
   end
