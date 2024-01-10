@@ -20,6 +20,10 @@ defmodule Redis.RESP do
     {:ok, "+#{string}\r\n"}
   end
 
+  def bulk_string(nil) do
+    {:ok, "$-1\r\n"}
+  end
+
   def bulk_string(string) do
     length = String.length(string)
     {:ok, "$#{length}\r\n#{string}\r\n"}
