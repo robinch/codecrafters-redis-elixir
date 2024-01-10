@@ -15,14 +15,13 @@ defmodule Redis.Connection do
   end
 
   def handle_continue(:start_loop, state) do
-    Logger.debug("handle_continue in Connection called")
     send(self(), :listen)
     {:noreply, state}
   end
 
   def handle_info(:listen, state) do
-    Logger.debug("handle_info :listen in Connection called")
     {:ok, data} = :gen_tcp.recv(state.socket, 0)
+    Logger.debug("Received: #{inspect data}")
 
     {:ok, result} =
       data

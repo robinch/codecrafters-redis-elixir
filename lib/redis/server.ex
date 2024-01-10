@@ -3,7 +3,6 @@ defmodule Redis.Server do
     Listens for incoming connections and starts a new connection process for each one.
   """
   use GenServer
-  require Logger
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [])
@@ -15,13 +14,11 @@ defmodule Redis.Server do
   end
 
   def handle_continue(:start_loop, listen_socket) do
-    Logger.debug("handle_continue in Server called")
     send(self(), :listen)
     {:noreply, listen_socket}
   end
 
   def handle_info(:listen, listen_socket) do
-    Logger.debug("handle_info :listen in Server called")
     {:ok, socket} = :gen_tcp.accept(listen_socket)
 
     {:ok, pid} =

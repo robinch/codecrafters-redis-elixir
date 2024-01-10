@@ -1,13 +1,28 @@
 defmodule Redis.RESP do
   alias Redis.Response
-  def encode(result)do
+  require Logger
+
+  def encode(result) do
     case result do
-      %Response{type: :simple_string, data: data} -> simple_string(data)
+      %Response{type: :simple_string, data: data} ->
+        simple_string(data)
+
+      %Response{type: :bulk_string, data: data} ->
+        bulk_string(data)
+
+      _ ->
+        Logger.error("Unknown type #{result.type} for #{result.data}")
+        {:error, "Unknown type #{result.type} for #{result.data}"}
     end
   end
 
   def simple_string(string) do
     {:ok, "+#{string}\r\n"}
+  end
+
+  def bulk_string(string) do
+    length = String.length(string)
+    {:ok, "$#{length}\r\n#{string}\r\n"}
   end
 
   def decode(resp) do

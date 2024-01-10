@@ -11,16 +11,16 @@ defmodule Redis.Store do
     :ets.lookup(@ets_name, key)
     |> case do
       [{^key, value}] -> value
-      [] -> nil  
+      [] -> nil
     end
   end
 
   def set(key, value) do
     GenServer.call(__MODULE__, {:set, key, value})
   end
- 
-  def init(_) do 
-    :ets.new(@ets_name, [:set, :protected, :named_table]) 
+
+  def init(_) do
+    :ets.new(@ets_name, [:set, :protected, :named_table])
     {:ok, nil}
   end
 
