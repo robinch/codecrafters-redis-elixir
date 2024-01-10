@@ -11,16 +11,16 @@ defmodule Redis.Server do
 
   def init(_) do
     {:ok, listen_socket} = :gen_tcp.listen(6379, [:binary, active: false, reuseaddr: true])
-    {:ok, %{listen_socket: listen_socket}, {:continue, :start_loop}}
+    {:ok, listen_socket, {:continue, :start_loop}}
   end
 
-  def handle_continue(:start_loop, state) do
+  def handle_continue(:start_loop, listen_socket) do
     Logger.debug("handle_continue in Server called")
     send(self(), :listen)
-    {:noreply, state}
+    {:noreply, listen_socket}
   end
 
-  def handle_info(:listen, %{listen_socket: listen_socket} = state) do
+  def handle_info(:listen, listen_socket) do
     Logger.debug("handle_info :listen in Server called")
     {:ok, socket} = :gen_tcp.accept(listen_socket)
 
@@ -29,6 +29,10 @@ defmodule Redis.Server do
 
     :ok = :gen_tcp.controlling_process(socket, pid)
     send(self(), :listen)
-    {:noreply, state}
+    {:noreply, listen_socket}
+  end
+
+  def terminate(_, listen_socket) do
+    :gen_tcp.close(listen_socket)
   end
 end

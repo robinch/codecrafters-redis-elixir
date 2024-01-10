@@ -35,4 +35,8 @@ defmodule Redis.Connection do
     send(self(), :listen)
     {:noreply, state}
   end
+
+  def terminate(_reason, state) do
+    :gen_tcp.close(state.socket) 
+  end
 end
