@@ -1,10 +1,8 @@
 defmodule Redis.RESP do
-
-  alias Redis.Type
-
+  alias Redis.Response
   def encode(result)do
     case result do
-      %Type.SimpleString{data: data} -> simple_string(data)
+      %Response{type: :simple_string, data: data} -> simple_string(data)
     end
   end
 
