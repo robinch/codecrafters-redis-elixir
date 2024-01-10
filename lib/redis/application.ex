@@ -3,6 +3,7 @@ defmodule Redis.Application do
 
   def start(_type, _args) do
     children = [
+      Redis.Store,
       Redis.Server,
       {DynamicSupervisor, name: Redis.ConnectionSupervisor, strategy: :one_for_one}
     ]
