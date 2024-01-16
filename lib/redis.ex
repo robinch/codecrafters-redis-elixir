@@ -13,11 +13,22 @@ defmodule Redis do
     [command | args] = commands
 
     case [String.upcase(command) | args] do
-      ["PING"] -> ping()
-      ["ECHO", message] -> echo(message)
-      ["SET", key, value | options] -> set(key, value, to_set_opts(options))
-      ["GET", key] -> get(key)
-      ["CONFIG", "GET", key] -> config_get(key)
+      ["PING"] ->
+        ping()
+
+      ["ECHO", message] ->
+        echo(message)
+
+      ["SET", key, value | options] ->
+        set(key, value, to_set_opts(options))
+
+      ["GET", key] ->
+        get(key)
+
+      ["CONFIG", command, key] ->
+        case String.upcase(command) do
+          "GET" -> config_get(key)
+        end
     end
   end
 
