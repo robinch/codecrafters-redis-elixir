@@ -21,11 +21,12 @@ defmodule Redis.Connection do
 
   def handle_info(:listen, state) do
     {:ok, data} = :gen_tcp.recv(state.socket, 0)
-    Logger.debug("Received: #{inspect data}")
+    Logger.debug("Received: #{inspect(data)}")
 
     {:ok, result} =
       data
       |> RESP.decode()
+      |> IO.inspect(label: "Decoded")
       |> Redis.run()
 
     {:ok, response} = RESP.encode(result)
@@ -36,6 +37,6 @@ defmodule Redis.Connection do
   end
 
   def terminate(_reason, state) do
-    :gen_tcp.close(state.socket) 
+    :gen_tcp.close(state.socket)
   end
 end
