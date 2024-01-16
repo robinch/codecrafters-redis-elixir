@@ -9,6 +9,7 @@ defmodule Redis.Server do
   end
 
   def init(_) do
+    Redis.init()
     {:ok, listen_socket} = :gen_tcp.listen(6379, [:binary, active: false, reuseaddr: true])
     {:ok, listen_socket, {:continue, :start_loop}}
   end

@@ -1,18 +1,25 @@
 defmodule Redis.RESP do
   alias Redis.Response
+  alias Redis.Types.{Array, BulkString, SimpleString}
   require Logger
 
-  def encode(result) do
-    case result do
-      %Response{type: :simple_string, data: data} ->
+  def encode(data) do
+    case data do
+      %Response{data: data} ->
+        encode(data)
+
+      %SimpleString{data: data} ->
         simple_string(data)
 
-      %Response{type: :bulk_string, data: data} ->
+      %BulkString{data: data} ->
         bulk_string(data)
 
-      _ ->
-        Logger.error("Unknown type #{result.type} for #{result.data}")
-        {:error, "Unknown type #{result.type} for #{result.data}"}
+      %Array{data: data} ->
+        array(data)
+
+      data ->
+        Logger.error("Could not encode #{data}")
+        {:error, "Could not encode #{data}"}
     end
   end
 
@@ -27,6 +34,22 @@ defmodule Redis.RESP do
   def bulk_string(string) do
     length = String.length(string)
     {:ok, "$#{length}\r\n#{string}\r\n"}
+  end
+
+  def array(elements) do
+    length = Enum.count(elements)
+
+    encoded_elements =
+      Enum.map(
+        elements,
+        fn element ->
+          {:ok, elem} = encode(element)
+          elem
+        end
+      )
+      |> Enum.join()
+
+    {:ok, "*#{length}\r\n#{encoded_elements}"}
   end
 
   def decode(resp) do

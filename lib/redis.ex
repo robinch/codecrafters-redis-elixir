@@ -1,5 +1,12 @@
 defmodule Redis do
   alias Redis.{Response, Store}
+  alias Redis.Types.{Array, SimpleString, BulkString}
+  require Logger
+
+  def init() do
+    Logger.debug("System args #{inspect(System.argv())}")
+    handle_system_args(System.argv())
+  end
 
   @spec run([String.t()]) :: {:ok, Response.t()}
   def run(commands) do
@@ -10,15 +17,16 @@ defmodule Redis do
       ["ECHO", message] -> echo(message)
       ["SET", key, value | options] -> set(key, value, to_set_opts(options))
       ["GET", key] -> get(key)
+      ["CONFIG", "GET", key] -> config_get(key)
     end
   end
 
   def ping() do
-    {:ok, %Response{type: :simple_string, data: "PONG"}}
+    {:ok, %Response{data: %SimpleString{data: "PONG"}}}
   end
 
   def echo(data) do
-    {:ok, %Response{type: :simple_string, data: data}}
+    {:ok, %Response{data: %SimpleString{data: data}}}
   end
 
   def set(key, value, opts) do
@@ -30,7 +38,7 @@ defmodule Redis do
         acc
     end)
 
-    {:ok, %Response{type: :simple_string, data: "OK"}}
+    {:ok, %Response{data: %SimpleString{data: "OK"}}}
   end
 
   def expire(key, expire_in_ms) do
@@ -46,7 +54,19 @@ defmodule Redis do
 
   def get(key) do
     value = Store.get(key)
-    {:ok, %Response{type: :bulk_string, data: value}}
+    {:ok, %Response{data: %BulkString{data: value}}}
+  end
+
+  @config_prefix "__config__"
+
+  def config_set(key, value) do
+    :ok = Store.set("#{@config_prefix}:#{key}", value)
+    {:ok, %Response{data: %SimpleString{data: "OK"}}}
+  end
+
+  def config_get(key) do
+    value = Store.get("#{@config_prefix}:#{key}")
+    {:ok, %Response{data: %Array{data: [%BulkString{data: key}, %BulkString{data: value}]}}}
   end
 
   defp to_set_opts(options), do: do_to_set_opts(options, [])
@@ -62,5 +82,21 @@ defmodule Redis do
       _ ->
         do_to_set_opts(options, acc)
     end
+  end
+
+  defp handle_system_args([]), do: :ok
+
+  defp handle_system_args(["--dir", dir | rest]) do
+    config_set("dir", dir)
+    handle_system_args(rest)
+  end
+
+  defp handle_system_args(["--dbfilename", dir | rest]) do
+    config_set("dbfilename", dir)
+    handle_system_args(rest)
+  end
+
+  defp handle_system_args([_ | rest]) do
+    handle_system_args(rest)
   end
 end
