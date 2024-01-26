@@ -3,9 +3,12 @@ defmodule Redis do
   alias Redis.Types.{Array, SimpleString, BulkString}
   require Logger
 
+  @config_prefix "__config__"
+
   def init() do
     Logger.debug("System args #{inspect(System.argv())}")
     handle_system_args(System.argv())
+
     case filepath_from_config() do
       {:ok, filepath} ->
         Logger.debug("Loading from file #{filepath}")
@@ -32,6 +35,9 @@ defmodule Redis do
 
       ["GET", key] ->
         get(key)
+
+      ["KEYS", pattern] ->
+        keys(pattern)
 
       ["CONFIG", command, key] ->
         case String.upcase(command) do
@@ -76,7 +82,16 @@ defmodule Redis do
     {:ok, %Response{data: %BulkString{data: value}}}
   end
 
-  @config_prefix "__config__"
+  def keys(pattern) do
+    keys =
+      pattern
+      |> Store.keys()
+      |> Enum.reject(fn key -> String.starts_with?(key, "#{@config_prefix}:") end)
+      |> Enum.map(fn key -> %BulkString{data: key} end)
+
+    {:ok, %Response{data: %Array{data: keys}}}
+  end
+
 
   def config_set(key, value) do
     :ok = Store.set("#{@config_prefix}:#{key}", value)

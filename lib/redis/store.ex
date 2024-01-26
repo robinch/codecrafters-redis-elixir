@@ -26,6 +26,13 @@ defmodule Redis.Store do
     GenServer.call(__MODULE__, {:delete, key})
   end
 
+  @callback keys(pattern :: String.t()) :: [String.t()]
+  def keys(_pattern) do
+    @ets_name
+    |> :ets.tab2list()
+    |> Enum.map(fn {key, _} -> key end)
+  end
+
   def init(_) do
     :ets.new(@ets_name, [:set, :protected, :named_table])
     {:ok, nil}

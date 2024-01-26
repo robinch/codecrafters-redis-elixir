@@ -18,6 +18,10 @@ defmodule Redis.FakeStore do
     GenServer.call(__MODULE__, {:delete, key})
   end
 
+  def keys(pattern) do
+    GenServer.call(__MODULE__, {:keys, pattern})
+  end
+
   def init(_) do
     {:ok, %{}}
   end
@@ -32,5 +36,9 @@ defmodule Redis.FakeStore do
 
   def handle_call({:delete, key}, _from, state) do
     {:reply, :ok, Map.delete(state, key)}
+  end
+  
+  def handle_call({:keys, _pattern}, _from, state) do
+    {:reply, Map.keys(state), state}
   end
 end
