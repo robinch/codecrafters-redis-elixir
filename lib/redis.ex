@@ -1,11 +1,19 @@
 defmodule Redis do
-  alias Redis.{Response, Store}
+  alias Redis.{Rdb, Response, Store}
   alias Redis.Types.{Array, SimpleString, BulkString}
   require Logger
 
   def init() do
     Logger.debug("System args #{inspect(System.argv())}")
     handle_system_args(System.argv())
+    case filepath_from_config() do
+      {:ok, filepath} ->
+        Logger.debug("Loading from file #{filepath}")
+        Rdb.load_from_file(filepath)
+
+      {:error, :no_config_set} ->
+        Logger.debug("No config set")
+    end
   end
 
   @spec run([String.t()]) :: {:ok, Response.t()}
@@ -76,8 +84,14 @@ defmodule Redis do
   end
 
   def config_get(key) do
-    value = Store.get("#{@config_prefix}:#{key}")
-    {:ok, %Response{data: %Array{data: [%BulkString{data: key}, %BulkString{data: value}]}}}
+    Store.get("#{@config_prefix}:#{key}")
+    |> case do
+      nil ->
+        {:ok, %Response{data: %Array{data: []}}}
+
+      value ->
+        {:ok, %Response{data: %Array{data: [%BulkString{data: key}, %BulkString{data: value}]}}}
+    end
   end
 
   defp to_set_opts(options), do: do_to_set_opts(options, [])
@@ -109,5 +123,22 @@ defmodule Redis do
 
   defp handle_system_args([_ | rest]) do
     handle_system_args(rest)
+  end
+
+  def filepath_from_config() do
+    {:ok, %Response{data: %Array{data: config_dir}}} = config_get("dir")
+    {:ok, %Response{data: %Array{data: config_dbfilename}}} = config_get("dbfilename")
+
+    case {config_dir, config_dbfilename} do
+      {dir_array, dbfilename_array} when dir_array != [] and dbfilename_array != [] ->
+        [_, %BulkString{data: dir}] = dir_array
+        [_, %BulkString{data: dbfilename}] = dbfilename_array
+
+        {:ok, "#{dir}#{dbfilename}"}
+
+      _ ->
+        Logger.info("No config set")
+        {:error, :no_config_set}
+    end
   end
 end

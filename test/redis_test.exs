@@ -25,18 +25,25 @@ defmodule RedisTest do
                Redis.run(["GET", "beans"])
     end
 
-    test "get config" do
-      {:ok, _} = Redis.config_set("dir", "/tmp/test_dir/")
+    test "configs" do
+      {:ok, _} = Redis.config_set("dir", "test/support/")
+      {:ok, _} = Redis.config_set("dbfilename", "test.rdb")
 
       assert {:ok,
               %Redis.Response{
                 data: %Redis.Types.Array{
                   data: [
                     %Redis.Types.BulkString{data: "dir"},
-                    %Redis.Types.BulkString{data: "/tmp/test_dir/"}
+                    %Redis.Types.BulkString{data: "test/support/"}
                   ]
                 }
               }} == Redis.run(["CONFIG", "GET", "dir"])
+
+      assert {:ok, "test/support/test.rdb"} == Redis.filepath_from_config()
+
+      :ok = Redis.Rdb.load_from_file("test/support/test.rdb")
+
+      assert {:ok, %Redis.Response{type: nil, data: %Redis.Types.BulkString{data: "myval"}}} == Redis.run(["GET", "mykey"])
     end
   end
 end
