@@ -1,5 +1,5 @@
 defmodule Redis.Response do
-  defstruct [:type, :data]
+  defstruct [:data]
 
   @type redis_types ::
           Redis.Types.BulkString.t()
