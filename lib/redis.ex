@@ -134,7 +134,7 @@ defmodule Redis do
         [_, %BulkString{data: dir}] = dir_array
         [_, %BulkString{data: dbfilename}] = dbfilename_array
 
-        {:ok, "#{dir}#{dbfilename}"}
+        {:ok, "#{dir}/#{dbfilename}"}
 
       _ ->
         Logger.info("No config set")

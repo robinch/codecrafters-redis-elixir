@@ -26,7 +26,7 @@ defmodule RedisTest do
     end
 
     test "configs" do
-      {:ok, _} = Redis.config_set("dir", "test/support/")
+      {:ok, _} = Redis.config_set("dir", "test/support")
       {:ok, _} = Redis.config_set("dbfilename", "test.rdb")
 
       assert {:ok,
@@ -34,7 +34,7 @@ defmodule RedisTest do
                 data: %Redis.Types.Array{
                   data: [
                     %Redis.Types.BulkString{data: "dir"},
-                    %Redis.Types.BulkString{data: "test/support/"}
+                    %Redis.Types.BulkString{data: "test/support"}
                   ]
                 }
               }} == Redis.run(["CONFIG", "GET", "dir"])
