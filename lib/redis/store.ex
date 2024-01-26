@@ -33,6 +33,18 @@ defmodule Redis.Store do
     |> Enum.map(fn {key, _} -> key end)
   end
 
+  @callback expiry(key :: String.t(), expire_in_ms :: integer()) :: :ok
+  def expiry(key, expire_in_ms) do
+    Task.Supervisor.start_child(
+      Redis.TaskSupervisor,
+      fn ->
+        :timer.sleep(expire_in_ms)
+        :ok = delete(key)
+      end,
+      restart: :transient
+    )
+  end
+
   def init(_) do
     :ets.new(@ets_name, [:set, :protected, :named_table])
     {:ok, nil}

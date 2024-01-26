@@ -22,6 +22,10 @@ defmodule Redis.FakeStore do
     GenServer.call(__MODULE__, {:keys, pattern})
   end
 
+  def expiry(key, _expire_in_ms) do
+    delete(key)
+  end
+
   def init(_) do
     {:ok, %{}}
   end

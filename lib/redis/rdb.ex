@@ -20,9 +20,27 @@ defmodule Redis.Rdb do
           "Loading DB #{db.db_number} with #{length(db.key_value_pairs)} key-value pairs"
         )
 
-        Enum.each(db.key_value_pairs, fn %KeyValuePair{key: key, value: value} ->
-          Logger.debug("Storing key #{inspect(key)} with value #{inspect(value)} from rdb file")
-          store.set(key, value)
+        Enum.each(db.key_value_pairs, fn %KeyValuePair{
+                                           key: key,
+                                           value: value,
+                                           expires_at: expires_at
+                                         } ->
+          Logger.debug(
+            "Storing key #{inspect(key)} with value #{inspect(value)}, expiry: #{inspect(expires_at)} from rdb file"
+          )
+
+          case expires_at do
+            nil ->
+              store.set(key, value)
+
+            expires_at ->
+              diff = DateTime.diff(expires_at, utc_now(), :millisecond)
+
+              if diff > 0 do
+                store.set(key, value)
+                store.expiry(key, diff)
+              end
+          end
         end)
       end)
 
@@ -90,38 +108,48 @@ defmodule Redis.Rdb do
     end
   end
 
-  # Right now I assume that there is only one DB and one key value pair.
-  # So I finish reading key value pairs when I get the end of RDB indicator (0xFF).
-
-  # This will stop the parsing at the end of RDB indicator (0xFF)
-  # I don't need this just yet
-  # def parse_key_value_pairs(rdb, db, <<0xFF, _checksum::binary>> = rest) do
-  #   {:ok, rdb, db, rest}
-  # end
-
-  # TODO: Support key-value pairs with expiry
-  # def parse_key_value_pairs(
-  #       rdb,
-  #       db,
-  #       <<0xFD, expiry_in_seconds::unsigned-size(4), value_type::binary-size(1),
-  #         kv_pair_and_rest::binary>>
-  #     ) do
-  # end
-
-  # def parse_key_value_pairs(
-  #       rdb,
-  #       db,
-  #       <<0xFD, expiry_in_milliseconds::unsigned-size(8), value_type::binary-size(1),
-  #         kv_pair_and_rest::binary>>
-  #     ) do
-  # end
-
   def parse_key_value_pairs(db = %Database{}, <<0xFE, _::binary>> = rest) do
     {:ok, db, rest}
   end
 
   def parse_key_value_pairs(db = %Database{}, <<0xFF, _::binary>> = rest) do
     {:ok, db, rest}
+  end
+
+  def parse_key_value_pairs(
+        db = %Database{},
+        <<0xFD, expires_at_unix_in_seconds::unsigned-little-integer-size(32),
+          _value_type::integer-size(8), kv_pair_and_rest::binary>>
+      ) do
+    {:ok, key, val_and_rest} = parse_string(kv_pair_and_rest)
+
+    # TODO: Parse value correctly, now just assumes it's a string
+    {:ok, val, rest} = parse_string(val_and_rest)
+
+    {:ok, expires_at} = DateTime.from_unix(expires_at_unix_in_seconds, :second)
+    kvp = %KeyValuePair{key: key, value: val, expires_at: expires_at}
+
+    db = %{db | key_value_pairs: [kvp | db.key_value_pairs]}
+
+    parse_key_value_pairs(db, rest)
+  end
+
+  def parse_key_value_pairs(
+        db = %Database{},
+        <<0xFC, expires_at_unix_in_milliseconds::unsigned-little-integer-size(64),
+          _value_type::integer-size(8), kv_pair_and_rest::binary>>
+      ) do
+    {:ok, key, val_and_rest} = parse_string(kv_pair_and_rest)
+
+    # TODO: Parse value correctly, now just assumes it's a string
+    {:ok, val, rest} = parse_string(val_and_rest)
+
+    {:ok, expires_at} = DateTime.from_unix(expires_at_unix_in_milliseconds, :millisecond)
+    kvp = %KeyValuePair{key: key, value: val, expires_at: expires_at}
+
+    db = %{db | key_value_pairs: [kvp | db.key_value_pairs]}
+
+    parse_key_value_pairs(db, rest)
   end
 
   def parse_key_value_pairs(
@@ -177,5 +205,9 @@ defmodule Redis.Rdb do
 
     <<key::binary-size(length), rest::binary>> = rest
     {:ok, key, rest}
+  end
+
+  defp utc_now() do
+    Application.get_env(:redis, :now, DateTime.utc_now())
   end
 end

@@ -3,10 +3,10 @@ defmodule Redis.Application do
 
   def start(_type, _args) do
     children = [
+      {Task.Supervisor, name: Redis.TaskSupervisor},
       Redis.Store,
       Redis.Server,
-      {DynamicSupervisor, name: Redis.ConnectionSupervisor, strategy: :one_for_one},
-      {Task.Supervisor, name: Redis.TaskSupervisor}
+      {DynamicSupervisor, name: Redis.ConnectionSupervisor, strategy: :one_for_one}
     ]
 
     opts = [strategy: :one_for_one, name: Redis.Supervisor]

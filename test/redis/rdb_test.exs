@@ -34,15 +34,27 @@ defmodule Redis.RdbTest do
     assert {:ok, rdb} = Rdb.parse(rdb)
 
     assert %Rdb{
-             rdb_version: 11,
-             hash_table_size: 1,
-             expire_hash_table_size: 0,
              databases: [
                %Redis.Rdb.Database{
                  db_number: 0,
-                 key_value_pairs: [%Redis.Rdb.KeyValuePair{key: "mykey", value: "myval"}]
+                 key_value_pairs: [
+                   %Redis.Rdb.KeyValuePair{expires_at: nil, key: "mykey", value: "myval"},
+                   %Redis.Rdb.KeyValuePair{
+                     key: "expinms",
+                     value: "hello",
+                     expires_at: ~U[2024-01-26 17:28:06.643Z]
+                   },
+                   %Redis.Rdb.KeyValuePair{
+                     key: "expins",
+                     value: "yo",
+                     expires_at: ~U[2024-01-26 17:28:22.637Z]
+                   }
+                 ]
                }
-             ]
+             ],
+             expire_hash_table_size: 2,
+             hash_table_size: 3,
+             rdb_version: 11
            } == rdb
   end
 

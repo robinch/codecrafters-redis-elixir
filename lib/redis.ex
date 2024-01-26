@@ -59,23 +59,13 @@ defmodule Redis do
 
     Enum.reduce(opts, :ok, fn
       {:px, expire_in_ms}, acc ->
-        expire(key, expire_in_ms)
+        Store.expiry(key, expire_in_ms)
         acc
     end)
 
     {:ok, %Response{data: %SimpleString{data: "OK"}}}
   end
 
-  def expire(key, expire_in_ms) do
-    Task.Supervisor.start_child(
-      Redis.TaskSupervisor,
-      fn ->
-        :timer.sleep(expire_in_ms)
-        :ok = Store.delete(key)
-      end,
-      restart: :transient
-    )
-  end
 
   def get(key) do
     value = Store.get(key)
