@@ -1,15 +1,18 @@
 defmodule App.MixProject do
-  # NOTE: You do not need to change anything in this file.
   use Mix.Project
 
   def project do
     [
       app: :redis,
       version: "1.0.0",
-      elixir: "~> 1.10",
+      elixir: "~> 1.16",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def application do
     [

@@ -7,6 +7,7 @@ defmodule Redis.Store do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @callback get(key :: String.t()) :: String.t() | nil
   def get(key) do
     :ets.lookup(@ets_name, key)
     |> case do
@@ -15,10 +16,12 @@ defmodule Redis.Store do
     end
   end
 
+  @callback set(key :: String.t(), value :: String.t()) :: :ok
   def set(key, value) do
     GenServer.call(__MODULE__, {:set, key, value})
   end
 
+  @callback delete(key :: String.t()) :: :ok
   def delete(key) do
     GenServer.call(__MODULE__, {:delete, key})
   end
